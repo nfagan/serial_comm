@@ -8,6 +8,8 @@ classdef SerialManager < handle
     baud_rate;
     debounce_timer = NaN;
     debounce_amount = .001;
+    INIT_TIMEOUT = 5;
+    CHARS = struct( 'init_char', '*' );
   end
   
   methods
@@ -49,6 +51,14 @@ classdef SerialManager < handle
       %   START -- Open the serial connection.
       
       fopen( obj.comm );
+      timeout = obj.INIT_TIMEOUT;
+      init_char = obj.CHARS.init_char;
+      msg = 'Initialization timed-out.';
+      response = serial_comm.util.await_and_return_non_null( obj.comm ...
+        , msg, timeout );
+      assert( isequal(response, init_char), ['Expected to receive the' ...
+        , ' initialization character ''%s'', but received ''%s''.'] ...
+        , init_char, response );
     end
     
     function close(obj)
@@ -74,6 +84,20 @@ classdef SerialManager < handle
       %   REWARD_ -- Debounced reward delivery.
       
       obj.reward_manager.reward( channel, quantity );
+    end
+    
+    function update(obj)
+      
+      %   UPDATE -- Update current / pending rewards.
+      
+      obj.debounce( @update_ );
+    end
+    
+    function update_(obj)
+      
+      %   UPDATE_ -- Debounced reward updating.
+      
+      obj.reward_manager.update();
     end
     
     function varargout = debounce(obj, func, varargin)

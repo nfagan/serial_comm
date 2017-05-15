@@ -4,8 +4,10 @@ classdef RewardManager < handle
     comm;
     rewards;
     channels;
+    last_reward_timer = NaN;
     RECEIPT_TIMEOUT = 5;
-    CHARS = struct( 'reward_status', '?' );
+    INTER_REWARD_INTERVAL = .1;
+    CHARS = struct( 'reward_status', '?', 'reward_end', 'V' );
   end
   
   methods
@@ -50,22 +52,33 @@ classdef RewardManager < handle
       ind = strcmp( obj.channels, channel );
       str = sprintf( '%s%s', obj.CHARS.reward_status, channel );
       fprintf( obj.comm, '%s', str );
-      response = obj.await_and_receive_non_null();
+      response = obj.await_and_return_non_null();
       complete = isequal( response, '1' );
       incomplete = isequal( response, '0' );
       if ( ~complete && ~incomplete )
         error( 'Invalid reward feedback response ''%s''.', response );
       end
       if ( incomplete ), return; end;
+      reward_end = obj.CHARS.reward_end;
       last = obj.rewards(ind).current;
       obj.rewards(ind).current = [];
       pending = obj.rewards(ind).pending;
       if ( ~isempty(pending) )
-        obj.rewards(ind).current = pending(1);
+        current = pending(1);
+        obj.rewards(ind).current = current;
         obj.rewards(ind).pending(1) = [];
         obj.rewards(ind).last = last;
+        if ( ~isempty(last) )
+          should_proceed = false;
+          while ( ~should_proceed )
+            should_proceed = toc( obj.last_reward_timer ) - last/1e3 >= ...
+              obj.INTER_REWARD_INTERVAL;
+          end
+        end
         %   deliver reward
-        fprintf( obj.comm, '%s', channel );
+        str = sprintf( '%s%d%s', channel, round(current), reward_end );
+        fprintf( obj.comm, '%s', str );
+        obj.last_reward_timer = tic;
       end
     end
     
