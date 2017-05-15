@@ -18,8 +18,9 @@ classdef RewardManager < handle
       %       - `channels` (cell array of strings) -- Characters specifying
       %         each reward channel.
       
-      obj.assert__isa( comm, 'serial', 'the serial communicator' );
-      obj.assert__is_cellstr( channels, 'the channel characters' );
+      serial_comm.util.assert__isa( comm, 'serial', 'the serial communicator' );
+      channels = serial_comm.util.ensure_cell( channels );
+      serial_comm.util.assert__is_cellstr( channels, 'the channel characters' );
       obj.comm = comm;
       obj.channels = channels;
       emp = repmat( {[]}, 1, numel(channels) );
@@ -47,7 +48,8 @@ classdef RewardManager < handle
       %       - `channel` (char) -- Channel identifier.
       
       ind = strcmp( obj.channels, channel );
-      fprintf( obj.comm, '%s%s', obj.CHARS.reward_status, channel );
+      str = sprintf( '%s%s', obj.CHARS.reward_status, channel );
+      fprintf( obj.comm, '%s', str );
       response = obj.await_and_receive_non_null();
       complete = isequal( response, '1' );
       incomplete = isequal( response, '0' );
@@ -79,7 +81,7 @@ classdef RewardManager < handle
       ind = strcmp( obj.channels, channel );
       assert( any(ind), 'No channel matches ''%s''.', channel );
       obj.rewards(ind).pending(end+1) = quantity;
-      obj.update();
+      obj.update_channel( channel );
     end
     
     function response = await_and_return_non_null(obj)
@@ -92,37 +94,15 @@ classdef RewardManager < handle
             , ' %0.1f seconds.'], obj.RECEIPT_TIMEOUT );
       response = await_and_return_non_null( obj.comm, msg, obj.RECEIPT_TIMEOUT );
     end
+  end
+  
+  methods (Static = true)
     
-    function assert__isa(obj, var, kind, var_name)
+    function arr = ensure_cell( arr )
       
-      %   ASSERT__ISA -- Ensure a variable is of a given kind.
-      %
-      %     IN:
-      %       - `var` (/any/) -- Variable to check.
-      %       - `kind` (char) -- Expected class of `var`.
-      %       - `var_name` (char) |OPTIONAL| -- Optionally provide a more
-      %         descriptive name for the variable in case the assertion
-      %         fails.
+      %   ENSURE_CELL -- Ensure an input is a cell array.
       
-      if ( nargin < 4 ), var_name = 'input'; end;
-      assert( isa(var, kind), 'Expected %s to be a ''%s''; was a ''%s''.' ...
-        , var_name, kind, class(var) );
-    end
-    
-    function assert__is_cellstr(obj, var, var_name)
-      
-      %   ASSERT__IS_CELLSTR -- Ensure a variable is a cell aray of
-      %     strings.
-      %
-      %     IN:
-      %       - `var` (/any/) -- Variable to check.
-      %       - `var_name` (char) |OPTIONAL| -- Optionally provide a more
-      %         descriptive name for the variable in case the assertion
-      %         fails.
-      
-      if ( nargin < 3 ), var_name = 'input'; end;
-      assert( iscellstr(var), ['Expected %s to be a cell array of strings;' ...
-        , ' was a ''%s'''], var_name, class(var) );
+      if ( ~iscell(arr) ), arr = { arr }; end;
     end
   end
   
