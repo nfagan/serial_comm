@@ -10,6 +10,7 @@ classdef SerialManager < handle
     debounce_amount = .001;
     INIT_TIMEOUT = 5;
     CHARS = struct( 'init_char', '*' );
+    is_started = false;
   end
   
   methods
@@ -50,6 +51,8 @@ classdef SerialManager < handle
       
       %   START -- Open the serial connection.
       
+      assert( ~obj.is_started, ['Serial communication has already been' ...
+        , ' started.'] );
       fopen( obj.comm );
       timeout = obj.INIT_TIMEOUT;
       init_char = obj.CHARS.init_char;
@@ -59,13 +62,16 @@ classdef SerialManager < handle
       assert( isequal(response, init_char), ['Expected to receive the' ...
         , ' initialization character ''%s'', but received ''%s''.'] ...
         , init_char, response );
+      obj.is_started = true;
     end
     
     function close(obj)
       
       %   CLOSE -- Close the serial connection.
       
+      assert( obj.is_started, 'Serial communication has not yet been started.' );
       fclose( obj.comm );
+      obj.is_started = false;
     end
     
     function reward(obj, channel, quantity)

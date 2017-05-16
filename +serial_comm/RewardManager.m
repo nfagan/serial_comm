@@ -4,7 +4,6 @@ classdef RewardManager < handle
     comm;
     rewards;
     channels;
-    last_reward_timer = NaN;
     RECEIPT_TIMEOUT = 5;
     INTER_REWARD_INTERVAL = .1;
     CHARS = struct( 'reward_status', '?', 'reward_end', 'V' );
@@ -26,7 +25,8 @@ classdef RewardManager < handle
       obj.comm = comm;
       obj.channels = channels;
       emp = repmat( {[]}, 1, numel(channels) );
-      obj.rewards = struct( 'current', emp, 'pending', emp, 'last', emp );
+      obj.rewards = struct( 'current', emp, 'pending', emp ...
+        , 'last', emp, 'timer', emp );
     end
     
     function update(obj)
@@ -69,16 +69,17 @@ classdef RewardManager < handle
         obj.rewards(ind).pending(1) = [];
         obj.rewards(ind).last = last;
         if ( ~isempty(last) )
+          reward_timer = obj.rewards(ind).timer;
           should_proceed = false;
           while ( ~should_proceed )
-            should_proceed = toc( obj.last_reward_timer ) - last/1e3 >= ...
+            should_proceed = toc( reward_timer ) - last/1e3 >= ...
               obj.INTER_REWARD_INTERVAL;
           end
         end
         %   deliver reward
         str = sprintf( '%s%d%s', channel, round(current), reward_end );
         fprintf( obj.comm, '%s', str );
-        obj.last_reward_timer = tic;
+        obj.rewards(ind).timer = tic;
       end
     end
     
