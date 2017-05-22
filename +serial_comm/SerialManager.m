@@ -9,7 +9,12 @@ classdef SerialManager < handle
     debounce_timer = NaN;
     debounce_amount = .001;
     INIT_TIMEOUT = 5;
-    CHARS = struct( 'init_char', '*' );
+    CHARS = struct( ...
+        'init_char', '*' ...
+      , 'wire_feedback', 'W' ...
+      , 'master', 'M' ...
+      , 'slave', 'S' ...
+    );
     is_started = false;
   end
   
@@ -23,7 +28,7 @@ classdef SerialManager < handle
       %       - `port` (char)
       %       - `messages` (struct array) -- Struct array with 'char' and
       %         'message' fields.
-      %       - `channels` (cell array of strings) -- 
+      %       - `channels` (cell array of strings) -- Reward channel ids.
       
       serial_comm.util.assert__isa( messages, 'struct', ['The message' ...
         , ' struct'] );
@@ -50,6 +55,10 @@ classdef SerialManager < handle
     function start(obj)
       
       %   START -- Open the serial connection.
+      %
+      %     The object will wait for initialization feedback from the
+      %     Arduino. If this is not received within `obj.INIT_TIMEOUT`
+      %     seconds, an error is thrown.
       
       assert( ~obj.is_started, ['Serial communication has already been' ...
         , ' started.'] );
