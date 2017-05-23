@@ -57,7 +57,11 @@ void handleSerialComm() {
   char inChar = char( inByte );
   switch ( inChar ) {
     case '?':
-      printRewardStatus();
+      if ( bslave ) {
+        printRewardStatusSlave();
+      } else {
+        printRewardStatusMaster();
+      }
       break;
     case BSLAVE:
       startWire( false );
@@ -73,8 +77,7 @@ void handleSerialComm() {
           int reward_size = stringToInt( reward_size_str, 0 );
           handleNewRewardSize( index, reward_size );
         } else {
-          String reward_size_str_ = "A";
-          reward_size_str_.setCharAt( 0, inChar );
+          String reward_size_str_ = String( inChar );
           reward_size_str_ += reward_size_str;
           Wire.beginTransmission( SLAVE_ADDRESS );
           Wire.write( reward_size_str_.c_str() );
@@ -96,7 +99,6 @@ void startWire( bool bmaster ) {
     bmaster = false;
     Wire.begin( SLAVE_ADDRESS );
     Wire.onReceive( handleReceipt );
-//    Wire.onRequest( handleRequest );
   }
   wire_initialized = true;
   Serial.print( WIRE_ACK );
@@ -110,6 +112,9 @@ void handleReceipt( int n_bytes ) {
   }
   char id_char = Wire.read();
   switch ( id_char ) {
+    case '?':
+      printRewardStatusWire();
+      break;
     default:
       int index = findIndex( reward_messages, n_rewards, id_char );
       if ( index != -1 ) {
@@ -147,7 +152,7 @@ void handleReward() {
   }
 }
 
-void printRewardStatus() {
+void printRewardStatusSlave() {
 
   while ( Serial.available() <= 0 ) {
     delay( 5 );
@@ -155,6 +160,39 @@ void printRewardStatus() {
   int channelId = Serial.read();
   bool rewardExpired = rewardIsExpired( char(channelId) );
   Serial.print( rewardExpired );
+}
+
+void printRewardStatusMaster() {
+
+  while ( Serial.available() <= 0 ) {
+    delay( 5 );
+  }
+  char id_char = Serial.read();
+  String transmission = String( '?' );
+  transmission += id_char;
+  transmit( transmission.c_str() );
+  while ( !Wire.available() ) {
+    delay( 5 );
+  }
+  char read_wire_char = Wire.read();
+  Serial.print( read_wire_char );
+}
+
+void printRewardStatusWire() {
+
+  while ( Wire.available() <= 0 ) {
+    delay( 5 );
+  }
+  int channelId = Wire.read();
+  bool rewardExpired = rewardIsExpired( char(channelId) );
+  Wire.write( rewardExpired );
+}
+
+void transmit( char c ) {
+
+  Wire.beginTransmission( SLAVE_ADDRESS );
+  Wire.write( c );
+  Wire.endTransmission();
 }
 
 bool rewardIsExpired( char rewardId ) {

@@ -16,9 +16,10 @@ void setup() {
     //  wait
   }
 
-  Serial.print( init_char );
-
 	Serial.begin( 115200 );
+
+	Serial.print( init_char );
+	
 	for ( int i = 0; i < n_rewards; i++ ) {
 		pinMode( reward_pins[i], OUTPUT );
 	}
