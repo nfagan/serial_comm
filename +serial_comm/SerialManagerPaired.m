@@ -37,7 +37,8 @@ classdef SerialManagerPaired < serial_comm.SerialManager
       %     Wire data transfer is ready. If this is not received within
       %     `obj.WIRE_TIMEOUT` seconds, an error is thrown.
       
-      start@serial_comm.SerialManager( obj );      
+      start@serial_comm.SerialManager( obj );
+      if ( obj.bypass ), return; end;
       timeout = obj.WIRE_TIMEOUT;
       wire_feedback_char = obj.CHARS.wire_feedback;
       wire_init_char = obj.CHARS.(obj.role);

@@ -49,6 +49,7 @@ classdef RewardManager < handle
       %     IN:
       %       - `channel` (char) -- Channel identifier.
       
+      if ( isempty(obj.rewards.pending) ), return; end
       ind = strcmp( obj.channels, channel );
       str = sprintf( '%s%s', obj.CHARS.reward_status, channel );
       fprintf( obj.comm, '%s', str );
@@ -88,11 +89,22 @@ classdef RewardManager < handle
       %   REWARD -- Deliver a reward, or add a reward to the currently
       %     pending rewards.
       %
+      %     obj.reward( 'A', 100 ) delivers a 100ms reward associated with
+      %     channel 'A'.
+      %
+      %     obj.reward( 1, 100 ) delivers the reward to the channel
+      %     identified by obj.channels{1}; i.e., the first channel.
+      %
       %     IN:
-      %       - `channel` (char) -- Channel specifier.
+      %       - `channel` (char, double) -- Channel specifier.
       %       - `quantity` (double) -- Reward size, in ms.
       
-      ind = strcmp( obj.channels, channel );
+      if ( ischar(channel) )
+        ind = strcmp( obj.channels, channel );
+      else
+        ind = channel;
+        channel = obj.channels{ ind };
+      end
       assert( any(ind), 'No channel matches ''%s''.', channel );
       obj.rewards(ind).pending(end+1) = quantity;
       obj.update_channel( channel );

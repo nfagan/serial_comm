@@ -5,9 +5,11 @@ char reward_status = '?';
 int n_rewards = 2;
 char reward_messages[2] = { 'A', 'B' };
 char reward_size_end = 'V';
-int reward_pins[2] = { 11, 44 };
+int reward_pins[2] = { 11, 10 };
 int rewards[2] = { 0, 0 };
 bool reward_state_changed[2] = { false, false };
+
+int response_index = 0;
 
 #define BSLAVE 'S'
 #define BMASTER 'M'
@@ -87,26 +89,34 @@ void handleSerialComm() {
   }
 }
 
-void startWire( bool bmaster ) {
-  
+void startWire( bool b_master ) {
+
   if ( wire_initialized ) return;
-  if ( bmaster ) {
-    Wire.begin();
+  if ( b_master ) {
     bmaster = true;
     bslave = false;
+    Wire.begin();
+    //    Wire.onReceive( handleReceiptMaster );
   } else {
     bslave = true;
     bmaster = false;
     Wire.begin( SLAVE_ADDRESS );
     Wire.onReceive( handleReceipt );
+    Wire.onRequest( handleRequest );
   }
   wire_initialized = true;
   Serial.print( WIRE_ACK );
 }
 
+void handleRequest() {
+
+  bool rewardExpired = rewardIsExpired( reward_messages[response_index] );
+  String rewardExpired_ = String( char(rewardExpired) );
+  Wire.write( rewardExpired_.c_str() );
+}
+
 void handleReceipt( int n_bytes ) {
 
-  if ( n_bytes == 1 ) return;
   while ( Wire.available() <= 0 ) {
     //
   }
@@ -121,7 +131,7 @@ void handleReceipt( int n_bytes ) {
         String reward_size_str = readInWire( reward_size_end, "" );
         int reward_size = stringToInt( reward_size_str, 0 );
         handleNewRewardSize( index, reward_size );
-    }
+      }
   }
 }
 
@@ -170,12 +180,15 @@ void printRewardStatusMaster() {
   char id_char = Serial.read();
   String transmission = String( '?' );
   transmission += id_char;
-  transmit( transmission.c_str() );
-  while ( !Wire.available() ) {
+  Wire.beginTransmission( SLAVE_ADDRESS );
+  Wire.write( transmission.c_str() );
+  Wire.endTransmission();
+  Wire.requestFrom( SLAVE_ADDRESS, 1 );
+  while ( Wire.available() <= 0 ) {
     delay( 5 );
   }
-  char read_wire_char = Wire.read();
-  Serial.print( read_wire_char );
+  int read_wire = Wire.read();
+  Serial.print( read_wire );
 }
 
 void printRewardStatusWire() {
@@ -184,8 +197,12 @@ void printRewardStatusWire() {
     delay( 5 );
   }
   int channelId = Wire.read();
-  bool rewardExpired = rewardIsExpired( char(channelId) );
-  Wire.write( rewardExpired );
+  char id_char = char( channelId );
+  bool rewardExpired = rewardIsExpired( id_char );
+  response_index = findIndex( reward_messages, n_rewards, id_char );
+
+  //  String rewardExpired_ = String( char(rewardExpired) );
+  //  Wire.write( rewardExpired_.c_str() );
 }
 
 void transmit( char c ) {
@@ -199,14 +216,14 @@ bool rewardIsExpired( char rewardId ) {
 
   int index = findIndex( reward_messages, n_rewards, rewardId );
   if ( index == -1 ) {
-    Serial.print( '!' ); 
+    Serial.print( '!' );
     return false;
   }
   return rewards[index] <= 0;
 }
 
 String readIn( char endMessage, String initial ) {
-  
+
   while ( Serial.available() <= 0 ) {
     delay( 5 );
   }
@@ -220,7 +237,7 @@ String readIn( char endMessage, String initial ) {
 }
 
 String readInWire( char endMessage, String initial ) {
-  
+
   while ( Wire.available() <= 0 ) {
     delay( 5 );
   }
