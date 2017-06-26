@@ -49,8 +49,8 @@ classdef RewardManager < handle
       %     IN:
       %       - `channel` (char) -- Channel identifier.
       
-      if ( isempty(obj.rewards.pending) ), return; end
       ind = strcmp( obj.channels, channel );
+      if ( isempty(obj.rewards(ind).pending) ), return; end
       str = sprintf( '%s%s', obj.CHARS.reward_status, channel );
       fprintf( obj.comm, '%s', str );
       response = obj.await_and_return_non_null();
