@@ -106,6 +106,7 @@ classdef RewardManager < handle
         channel = obj.channels{ ind };
       end
       assert( any(ind), 'No channel matches ''%s''.', channel );
+      if ( quantity == 0 ), return; end;
       obj.rewards(ind).pending(end+1) = quantity;
       obj.update_channel( channel );
     end
