@@ -116,17 +116,6 @@ classdef SerialManager < handle
       assert( any(ind), 'The message ''%s'' has not been defined.', msg );
       id_char = obj.messages(ind).char;
       obj.write( id_char, varargin{:} );
-%       for i = 1:numel(varargin)
-%         if ( isnumeric(varargin{i}) )
-%           to_append = num2str( varargin{i} );
-%         else
-%           assert( ischar(varargin{i}), 'Unexpected input type ''%s''.' ...
-%             , class(varargin{i}) );
-%           to_append = varargin{i};
-%         end
-%         full_msg = sprintf( '%s%s', full_msg, to_append );
-%       end
-%       obj.debounce( @send_, full_msg );
     end
     
     function send_(obj, msg)
@@ -171,6 +160,13 @@ classdef SerialManager < handle
         full_msg = sprintf( '%s%s', full_msg, to_append );
       end
       obj.debounce( @send_, full_msg );
+    end
+    
+    function clear_rewards(obj)
+      
+      %   CLEAR_REWARDS -- Clear any pending rewards.
+      
+      obj.reward_manager.clear_rewards();
     end
     
     function reward(obj, channel, quantity)

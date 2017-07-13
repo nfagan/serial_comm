@@ -111,6 +111,15 @@ classdef RewardManager < handle
       obj.update_channel( channel );
     end
     
+    function clear_rewards(obj)
+      
+      %   CLEAR_REWARDS -- Clear any pending rewards.
+      
+      emp = repmat( {[]}, 1, numel(obj.channels) );
+      obj.rewards = struct( 'current', emp, 'pending', emp ...
+        , 'last', emp, 'timer', emp );
+    end
+    
     function response = await_and_return_non_null(obj)
       
       %   AWAIT_AND_RETURN_NON_NULL -- Wait for and return a non-null
