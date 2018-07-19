@@ -39,7 +39,7 @@ classdef RewardManager < handle
       end
     end
     
-    function update_channel(obj, channel)
+    function update_channel_original(obj, channel)
       
       %   UPDATE_CHANNEL -- Update the pending / current rewards associated
       %     with a given channel.
@@ -62,6 +62,49 @@ classdef RewardManager < handle
       if ( incomplete ), return; end;
       reward_end = obj.CHARS.reward_end;
       last = obj.rewards(ind).current;
+      obj.rewards(ind).current = [];
+      pending = obj.rewards(ind).pending;
+      if ( ~isempty(pending) )
+        current = pending(1);
+        obj.rewards(ind).current = current;
+        obj.rewards(ind).pending(1) = [];
+        obj.rewards(ind).last = last;
+        if ( ~isempty(last) )
+          reward_timer = obj.rewards(ind).timer;
+          should_proceed = false;
+          while ( ~should_proceed )
+            should_proceed = toc( reward_timer ) - last/1e3 >= ...
+              obj.INTER_REWARD_INTERVAL;
+          end
+        end
+        %   deliver reward
+        str = sprintf( '%s%d%s', channel, round(current), reward_end );
+        fprintf( obj.comm, '%s', str );
+        obj.rewards(ind).timer = tic;
+      end
+    end
+    
+    function update_channel(obj, channel)
+      
+      update_channel_new(obj, channel);
+    end
+    
+    function update_channel_new(obj, channel)
+      
+      %   UPDATE_CHANNEL_NEW
+      
+      ind = strcmp( obj.channels, channel );
+      %   return if no pending rewards
+      if ( isempty(obj.rewards(ind).pending) )
+        return; 
+      end
+      reward_end = obj.CHARS.reward_end;
+      last = obj.rewards(ind).current;
+      reward_timer = obj.rewards(ind).timer;
+      %   check if reward is still pending
+      if ( ~isempty(reward_timer) && toc(reward_timer) < last/1e3 )
+        return;
+      end
       obj.rewards(ind).current = [];
       pending = obj.rewards(ind).pending;
       if ( ~isempty(pending) )
